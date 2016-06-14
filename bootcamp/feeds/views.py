@@ -134,6 +134,7 @@ def like(request):
         like = Activity(activity_type=Activity.LIKE, feed=feed_id, user=user)
         like.save()
         user.profile.notify_liked(feed)
+        Notification.set_notify(user.username)
 
     return HttpResponse(feed.calculate_likes())
 
@@ -152,6 +153,7 @@ def comment(request):
             feed.comment(user=user, post=post)
             user.profile.notify_commented(feed)
             user.profile.notify_also_commented(feed)
+	    Notification.set_notify(user.username)
         return render(request, 'feeds/partial_feed_comments.html',
                       {'feed': feed})
 

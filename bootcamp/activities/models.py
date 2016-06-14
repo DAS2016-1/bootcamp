@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.html import escape
 
-
 class Activity(models.Model):
     FAVORITE = 'F'
     LIKE = 'L'
@@ -37,9 +36,34 @@ class Activity(models.Model):
 #            user = question.user
 #            user.profile.reputation = user.profile.reputation + 5
 #            user.save()
+class Observer():
+    _observers = []
+    def __init__(self):
+        self._observers.append(self)
+        self._observables = {}
+    def observe(self, event_name, callback):
+        self._observables[event_name] = callback
 
+class Event():
+    def __init__(self, name, data, auto_notify=True):
+        self.name = name
+        self.data = data
+        if auto_notify:
+            self.notify()
+    def notify(self):
+        for observer in Observer._observers:
+            if self.name in observer._observables:
+                observer._observables[self.name](self.data)
+
+class NotificationObserver(Observer):
+    def __init__(self):
+        Observer.__init__(self)
+
+    def user_notify(self, user_name):
+        print("The user %s  has made a notification" % user_name)
 
 class Notification(models.Model):
+
     LIKED = 'L'
     COMMENTED = 'C'
     FAVORITED = 'F'
@@ -74,6 +98,7 @@ class Notification(models.Model):
     article = models.ForeignKey('articles.Article', null=True, blank=True)
     notification_type = models.CharField(max_length=1, choices=NOTIFICATION_TYPES)
     is_read = models.BooleanField(default=False)
+
 
     class Meta:
         verbose_name = 'Notification'
@@ -140,3 +165,12 @@ class Notification(models.Model):
 
         else:
             return value
+
+    @staticmethod
+    def set_notify(username):
+        notification_observer = NotificationObserver()
+        notification_observer.observe(
+            username,
+            notification_observer.user_notify
+        )
+        Event(username, username)
